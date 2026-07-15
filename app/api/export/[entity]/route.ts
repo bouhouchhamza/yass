@@ -1,3 +1,96 @@
-import {getAuth} from "@/lib/auth";import {getD1} from "@/lib/db";
-const allowed:Record<string,string>={products:"SELECT name AS Nom,sku AS SKU,product_type AS Type,manufacturer_barcode AS Code_fabricant,internal_barcode AS Code_interne,internal_qr AS QR,purchase_price_cents AS Prix_achat_centimes,selling_price_cents AS Prix_vente_centimes,stock AS Stock,minimum_stock AS Stock_minimum,active AS Actif FROM products ORDER BY name",categories:"SELECT name AS Nom,description AS Description,active AS Actif,created_at AS Date_creation FROM categories",customers:"SELECT name AS Nom,phone AS Telephone,credit_limit_cents AS Plafond_credit_centimes,debt_cents AS Dette_centimes,created_at AS Date_creation FROM customers",customer_debts:"SELECT name AS Client,phone AS Telephone,debt_cents AS Dette_centimes FROM customers WHERE debt_cents>0",credit_transactions:"SELECT customer_id AS Client_ID,sale_id AS Vente_ID,type AS Type,amount_cents AS Montant_centimes,balance_after_cents AS Solde_centimes,note AS Note,created_by AS Employe_ID,created_at AS Date FROM credit_transactions",suppliers:"SELECT name AS Nom,contact_name AS Contact,phone AS Telephone,email AS Email,debt_cents AS Dette_centimes,created_at AS Date_creation FROM suppliers",supplier_payments:"SELECT supplier_id AS Fournisseur_ID,amount_cents AS Montant_centimes,cash_register_id AS Caisse_ID,purchase_id AS Achat_ID,notes AS Notes,created_by AS Employe_ID,created_at AS Date FROM supplier_payments",purchases:"SELECT number AS Numero,supplier_id AS Fournisseur_ID,total_cents AS Total_centimes,paid_cents AS Paye_centimes,remaining_cents AS Dette_centimes,invoice_number AS Reference,notes AS Notes,created_by AS Employe_ID,created_at AS Date FROM purchases",purchase_items:"SELECT purchase_id AS Achat_ID,product_id AS Produit_ID,quantity AS Quantite,unit_cost_cents AS Cout_unitaire_centimes,line_total_cents AS Total_ligne_centimes FROM purchase_items",sales:"SELECT number AS Numero,customer_id AS Client_ID,cashier_id AS Employe_ID,total_cents AS Total_centimes,paid_cents AS Cash_centimes,credit_cents AS Credit_centimes,payment_type AS Paiement,status AS Statut,created_at AS Date FROM sales",sale_items:"SELECT sale_id AS Vente_ID,product_id AS Produit_ID,name_snapshot AS Produit,sku_snapshot AS SKU,quantity AS Quantite,unit_price_cents AS Prix_centimes,purchase_price_cents AS Cout_snapshot_centimes,line_total_cents AS Total_centimes FROM sale_items",returns:"SELECT sale_id AS Vente_ID,refund_cents AS Remboursement_centimes,reason AS Raison,created_by AS Employe_ID,created_at AS Date FROM returns",expenses:"SELECT category AS Categorie,description AS Description,amount_cents AS Montant_centimes,created_by AS Employe_ID,created_at AS Date FROM expenses",stock_movements:"SELECT product_id AS Produit_ID,type AS Type,quantity_change AS Variation,stock_before AS Stock_avant,stock_after AS Stock_apres,reason AS Raison,created_by AS Employe_ID,created_at AS Date FROM stock_movements",cash_registers:"SELECT cashier_id AS Employe_ID,opened_at AS Ouverture,opening_cents AS Fond_centimes,closed_at AS Fermeture,expected_cents AS Attendu_centimes,actual_cents AS Reel_centimes,difference_cents AS Ecart_centimes,status AS Statut FROM cash_registers",cash_movements:"SELECT register_id AS Caisse_ID,type AS Type,amount_cents AS Montant_centimes,reference_type AS Reference_type,reference_id AS Reference_ID,note AS Note,created_by AS Employe_ID,created_at AS Date FROM cash_movements",daily_closings:"SELECT business_date AS Jour,register_id AS Caisse_ID,report_json AS Rapport,created_by AS Employe_ID,created_at AS Date FROM daily_closings",workers:"SELECT u.name AS Nom,u.email AS Email,u.role AS Role,u.active AS Actif,w.phone AS Telephone,w.last_login_at AS Derniere_connexion,u.created_at AS Date_creation FROM user u LEFT JOIN worker_profiles w ON w.user_id=u.id",audit_logs:"SELECT u.name AS Employe,a.action AS Action,a.entity_type AS Entite,a.entity_id AS Entite_ID,a.details_json AS Details,a.created_at AS Date FROM audit_logs a LEFT JOIN user u ON u.id=a.user_id ORDER BY a.created_at DESC"};
-export async function GET(request:Request,{params}:{params:Promise<{entity:string}>}){const auth=await getAuth(),session=await auth.api.getSession({headers:request.headers});if(!session||!session.user.active||!["global_admin","owner"].includes(String(session.user.role)))return new Response("Interdit",{status:403});const entity=(await params).entity,sql=allowed[entity];if(!sql)return new Response("Export inconnu",{status:404});const db=await getD1(),rows=(await db.prepare(sql).all()).results;if(!rows.length)return new Response("\uFEFF",{headers:{"content-type":"text/csv;charset=utf-8"}});const keys=Object.keys(rows[0]),escape=(v:unknown)=>`"${String(v??"").replaceAll('"','""')}"`,csv="\uFEFF"+[keys.join(";"),...rows.map(r=>keys.map(k=>escape((r as Record<string,unknown>)[k])).join(";"))].join("\r\n");return new Response(csv,{headers:{"content-type":"text/csv;charset=utf-8","content-disposition":`attachment; filename=${entity}.csv`,"cache-control":"no-store"}})}
+import { getAuth } from "@/lib/auth";
+import { getD1 } from "@/lib/db";
+
+type CsvRow = Record<string, unknown>;
+
+const allowed: Record<string, string> = {
+  products:
+    "SELECT name AS Nom,sku AS SKU,product_type AS Type,manufacturer_barcode AS Code_fabricant,internal_barcode AS Code_interne,internal_qr AS QR,purchase_price_cents AS Prix_achat_centimes,selling_price_cents AS Prix_vente_centimes,stock AS Stock,minimum_stock AS Stock_minimum,active AS Actif FROM products ORDER BY name",
+  categories:
+    "SELECT name AS Nom,description AS Description,active AS Actif,created_at AS Date_creation FROM categories",
+  customers:
+    "SELECT name AS Nom,phone AS Telephone,credit_limit_cents AS Plafond_credit_centimes,debt_cents AS Dette_centimes,created_at AS Date_creation FROM customers",
+  customer_debts:
+    "SELECT name AS Client,phone AS Telephone,debt_cents AS Dette_centimes FROM customers WHERE debt_cents>0",
+  credit_transactions:
+    "SELECT customer_id AS Client_ID,sale_id AS Vente_ID,type AS Type,amount_cents AS Montant_centimes,balance_after_cents AS Solde_centimes,note AS Note,created_by AS Employe_ID,created_at AS Date FROM credit_transactions",
+  suppliers:
+    "SELECT name AS Nom,contact_name AS Contact,phone AS Telephone,email AS Email,debt_cents AS Dette_centimes,created_at AS Date_creation FROM suppliers",
+  supplier_payments:
+    "SELECT supplier_id AS Fournisseur_ID,amount_cents AS Montant_centimes,cash_register_id AS Caisse_ID,purchase_id AS Achat_ID,notes AS Notes,created_by AS Employe_ID,created_at AS Date FROM supplier_payments",
+  purchases:
+    "SELECT number AS Numero,supplier_id AS Fournisseur_ID,total_cents AS Total_centimes,paid_cents AS Paye_centimes,remaining_cents AS Dette_centimes,invoice_number AS Reference,notes AS Notes,created_by AS Employe_ID,created_at AS Date FROM purchases",
+  purchase_items:
+    "SELECT purchase_id AS Achat_ID,product_id AS Produit_ID,quantity AS Quantite,unit_cost_cents AS Cout_unitaire_centimes,line_total_cents AS Total_ligne_centimes FROM purchase_items",
+  sales:
+    "SELECT number AS Numero,customer_id AS Client_ID,cashier_id AS Employe_ID,total_cents AS Total_centimes,paid_cents AS Cash_centimes,credit_cents AS Credit_centimes,payment_type AS Paiement,status AS Statut,created_at AS Date FROM sales",
+  sale_items:
+    "SELECT sale_id AS Vente_ID,product_id AS Produit_ID,name_snapshot AS Produit,sku_snapshot AS SKU,quantity AS Quantite,unit_price_cents AS Prix_centimes,purchase_price_cents AS Cout_snapshot_centimes,line_total_cents AS Total_centimes FROM sale_items",
+  returns:
+    "SELECT sale_id AS Vente_ID,refund_cents AS Remboursement_centimes,reason AS Raison,created_by AS Employe_ID,created_at AS Date FROM returns",
+  expenses:
+    "SELECT category AS Categorie,description AS Description,amount_cents AS Montant_centimes,created_by AS Employe_ID,created_at AS Date FROM expenses",
+  stock_movements:
+    "SELECT product_id AS Produit_ID,type AS Type,quantity_change AS Variation,stock_before AS Stock_avant,stock_after AS Stock_apres,reason AS Raison,created_by AS Employe_ID,created_at AS Date FROM stock_movements",
+  cash_registers:
+    "SELECT cashier_id AS Employe_ID,opened_at AS Ouverture,opening_cents AS Fond_centimes,closed_at AS Fermeture,expected_cents AS Attendu_centimes,actual_cents AS Reel_centimes,difference_cents AS Ecart_centimes,status AS Statut FROM cash_registers",
+  cash_movements:
+    "SELECT register_id AS Caisse_ID,type AS Type,amount_cents AS Montant_centimes,reference_type AS Reference_type,reference_id AS Reference_ID,note AS Note,created_by AS Employe_ID,created_at AS Date FROM cash_movements",
+  daily_closings:
+    "SELECT business_date AS Jour,register_id AS Caisse_ID,report_json AS Rapport,created_by AS Employe_ID,created_at AS Date FROM daily_closings",
+  workers:
+    "SELECT u.name AS Nom,u.email AS Email,u.role AS Role,u.active AS Actif,w.phone AS Telephone,w.last_login_at AS Derniere_connexion,u.created_at AS Date_creation FROM user u LEFT JOIN worker_profiles w ON w.user_id=u.id",
+  audit_logs:
+    "SELECT u.name AS Employe,a.action AS Action,a.entity_type AS Entite,a.entity_id AS Entite_ID,a.details_json AS Details,a.created_at AS Date FROM audit_logs a LEFT JOIN user u ON u.id=a.user_id ORDER BY a.created_at DESC",
+};
+
+function escapeCsvValue(value: unknown): string {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ entity: string }> },
+) {
+  const auth = await getAuth();
+  const session = await auth.api.getSession({ headers: request.headers });
+
+  if (
+    !session ||
+    !session.user.active ||
+    !["global_admin", "owner"].includes(String(session.user.role))
+  ) {
+    return new Response("Interdit", { status: 403 });
+  }
+
+  const entity = (await params).entity;
+  const sql = allowed[entity];
+
+  if (!sql) {
+    return new Response("Export inconnu", { status: 404 });
+  }
+
+  const db = await getD1();
+  const queryResult = await db.prepare(sql).all<CsvRow>();
+  const rows: CsvRow[] = queryResult.results;
+
+  if (rows.length === 0) {
+    return new Response("\uFEFF", {
+      headers: { "content-type": "text/csv;charset=utf-8" },
+    });
+  }
+
+  const keys: string[] = Object.keys(rows[0]);
+  const dataLines = rows.map((row: CsvRow): string =>
+    keys.map((key: string): string => escapeCsvValue(row[key])).join(";"),
+  );
+  const csv = `\uFEFF${[keys.join(";"), ...dataLines].join("\r\n")}`;
+
+  return new Response(csv, {
+    headers: {
+      "content-type": "text/csv;charset=utf-8",
+      "content-disposition": `attachment; filename=${entity}.csv`,
+      "cache-control": "no-store",
+    },
+  });
+}
