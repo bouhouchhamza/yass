@@ -1,0 +1,6 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { LockKeyhole } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+export function LoginForm(){const router=useRouter();const [error,setError]=useState("");const [pending,setPending]=useState(false);async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setPending(true);setError("");const form=new FormData(e.currentTarget);const result=await authClient.signIn.email({email:String(form.get("email")),password:String(form.get("password"))});setPending(false);if(result.error){setError("Identifiants incorrects");return}router.push("/dashboard/pos");router.refresh()}return <form onSubmit={submit} className="mt-8 space-y-5"><label className="block text-sm font-bold">Adresse e-mail<input className="field mt-2" name="email" type="email" autoComplete="email" required placeholder="vous@boutique.ma"/></label><label className="block text-sm font-bold">Mot de passe<input className="field mt-2" name="password" type="password" autoComplete="current-password" required/></label>{error&&<p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}<button disabled={pending} className="btn btn-primary w-full"><LockKeyhole size={18}/>{pending?"Connexion…":"Se connecter"}</button></form>}

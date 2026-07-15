@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stationery-shop",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "stationery-db",
+    "database_id": "local-replace-with-cloudflare-d1-id",
+    "migrations_dir": "database/migrations"
+  }],
+  "vars": { "BETTER_AUTH_URL": "http://localhost:8787" },
+  "env": {
+    "integration": {
+      "name": "stationery-shop-integration",
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "stationery-test-db",
+        "database_id": "local-integration-only",
+        "migrations_dir": "database/migrations"
+      }],
+      "vars": { "BETTER_AUTH_URL": "http://localhost:8790" }
+    }
+  }
+}

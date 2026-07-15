@@ -1,0 +1,1 @@
+import {requirePermission} from "@/lib/auth";import {EmployeeForm} from "../../employees/employee-form";export default async function Page(){await requirePermission("workers.create");return <div className="mx-auto max-w-xl"><h1 className="mb-6 text-3xl font-black">Nouvel employé</h1><div className="card p-6"><EmployeeForm/></div></div>}

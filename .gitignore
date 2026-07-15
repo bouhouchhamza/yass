@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+coverage
+*.log
+.vercel
+.open-next
+.wrangler
+.dev.vars
+worker-configuration.d.ts
+tsconfig.tsbuildinfo

@@ -1,0 +1,8 @@
+export const permissions=["dashboard.view","dashboard.financials.view","pos.use","sales.view","sales.create","sales.return","customers.view","customers.create","customers.edit","customers.credit.view","customers.credit.payment","products.view","products.create","products.edit","products.deactivate","stock.view","stock.adjust","stock.inventory","suppliers.view","suppliers.create","suppliers.edit","suppliers.payment","purchases.view","purchases.create","expenses.view","expenses.create","expenses.edit","register.open","register.close","register.view_all","register.correct","reports.sales","reports.profit","reports.cash","reports.employees","workers.view","workers.create","workers.edit","workers.deactivate","audit.view","settings.manage","exports.use"] as const;
+export type Permission=typeof permissions[number];
+export type Role="global_admin"|"manager"|"cashier"|"stock_worker"|"owner";
+const cashier:Permission[]=["dashboard.view","pos.use","sales.view","sales.create","sales.return","customers.view","customers.create","customers.credit.view","customers.credit.payment","register.open","register.close"];
+const stock:Permission[]=["dashboard.view","products.view","products.create","products.edit","products.deactivate","stock.view","stock.adjust","stock.inventory","suppliers.view","purchases.view","purchases.create"];
+const manager=permissions.filter(p=>!["dashboard.financials.view","register.correct","audit.view","settings.manage"].includes(p));
+export const rolePermissions:Record<Role,readonly Permission[]>={global_admin:permissions,owner:permissions,manager,cashier,stock_worker:stock};
+export function roleAllows(role:Role,permission:Permission){return rolePermissions[role].includes(permission)}

@@ -1,0 +1,13 @@
+ALTER TABLE `expenses` ADD COLUMN `notes` text;
+ALTER TABLE `expenses` ADD COLUMN `status` text NOT NULL DEFAULT 'active';
+CREATE TABLE `expense_corrections` (`id` text PRIMARY KEY NOT NULL,`expense_id` text NOT NULL REFERENCES `expenses`(`id`),`original_amount_cents` integer NOT NULL,`corrected_amount_cents` integer NOT NULL CHECK(`corrected_amount_cents` >= 0),`difference_cents` integer NOT NULL,`reason` text NOT NULL,`register_id` text NOT NULL REFERENCES `cash_registers`(`id`),`created_by` text NOT NULL REFERENCES `user`(`id`),`created_at` integer NOT NULL);
+CREATE INDEX `expense_corrections_expense_idx` ON `expense_corrections` (`expense_id`,`created_at`);
+CREATE TABLE `register_corrections` (`id` text PRIMARY KEY NOT NULL,`register_id` text NOT NULL REFERENCES `cash_registers`(`id`),`original_expected_cents` integer NOT NULL,`original_actual_cents` integer NOT NULL,`original_difference_cents` integer NOT NULL,`corrected_actual_cents` integer NOT NULL CHECK(`corrected_actual_cents` >= 0),`corrected_difference_cents` integer NOT NULL,`reason` text NOT NULL,`requested_by` text NOT NULL REFERENCES `user`(`id`),`approved_by` text NOT NULL REFERENCES `user`(`id`),`approved_at` integer NOT NULL);
+CREATE INDEX `register_corrections_register_idx` ON `register_corrections` (`register_id`,`approved_at`);
+CREATE TABLE `login_history` (`id` text PRIMARY KEY NOT NULL,`user_id` text REFERENCES `user`(`id`),`email` text,`success` integer NOT NULL,`ip_address` text,`user_agent` text,`session_id` text REFERENCES `session`(`id`) ON DELETE SET NULL,`created_at` integer NOT NULL);
+CREATE INDEX `login_history_user_idx` ON `login_history` (`user_id`,`created_at`);
+CREATE INDEX `login_history_date_idx` ON `login_history` (`created_at`);
+CREATE INDEX `user_email_search_idx` ON `user` (`email`);
+CREATE INDEX `products_sku_search_idx` ON `products` (`sku`);
+CREATE INDEX `suppliers_name_search_idx` ON `suppliers` (`name`);
+CREATE INDEX `expenses_date_idx` ON `expenses` (`created_at`);

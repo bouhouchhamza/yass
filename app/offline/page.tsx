@@ -1,0 +1,2 @@
+export default function Offline() { return <main className="grid min-h-screen place-items-center p-6"><div className="card max-w-md p-8 text-center"><div className="text-5xl">📡</div><h1 className="mt-4 text-2xl font-black">Connexion interrompue</h1><p className="mt-2 text-gray-600">Les ventes sont désactivées hors ligne pour protéger le stock. Votre panier reste sauvegardé sur cet appareil.</p></div></main>; }
+
