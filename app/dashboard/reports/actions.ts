@@ -1,2 +1,62 @@
-"use server";import {revalidatePath} from "next/cache";import {requirePermission} from "@/lib/auth";import {getD1} from "@/lib/db";
-export async function closeDay(){const {user}=await requirePermission("reports");const db=await getD1(),date=new Date().toISOString().slice(0,10),start=Math.floor(new Date(`${date}T00:00:00`).getTime()/1000),end=start+86400;const summary=await db.prepare("SELECT COUNT(*) sales,COALESCE(SUM(total_cents),0) revenue,COALESCE(SUM(paid_cents),0) cash_sales,COALESCE(SUM(credit_cents),0) credit_sales FROM sales WHERE created_at>=? AND created_at<?").bind(start,end).first();const expenses=await db.prepare("SELECT COALESCE(SUM(amount_cents),0) total FROM expenses WHERE created_at>=? AND created_at<?").bind(start,end).first();const report={...summary,expenses:(expenses as {total:number})?.total??0};const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);await db.batch([db.prepare("INSERT INTO daily_closings(id,business_date,report_json,created_by,created_at) VALUES(?,?,?,?,?) ON CONFLICT(business_date) DO UPDATE SET report_json=excluded.report_json,created_by=excluded.created_by,created_at=excluded.created_at").bind(id,date,JSON.stringify(report),user.id,now),db.prepare("INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,details_json,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"close","business_day",date,JSON.stringify(report),now)]);revalidatePath("/dashboard/reports")}
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { requirePermission } from "@/lib/auth";
+import { getD1 } from "@/lib/db";
+
+type DailySalesSummary = {
+  sales: number;
+  revenue: number;
+  cash_sales: number;
+  credit_sales: number;
+};
+
+type ExpenseSummary = {
+  total: number;
+};
+
+export async function closeDay() {
+  const { user } = await requirePermission("reports");
+  const db = await getD1();
+  const date = new Date().toISOString().slice(0, 10);
+  const start = Math.floor(new Date(`${date}T00:00:00`).getTime() / 1000);
+  const end = start + 86400;
+  const summary = await db
+    .prepare(
+      "SELECT COUNT(*) sales,COALESCE(SUM(total_cents),0) revenue,COALESCE(SUM(paid_cents),0) cash_sales,COALESCE(SUM(credit_cents),0) credit_sales FROM sales WHERE created_at>=? AND created_at<?",
+    )
+    .bind(start, end)
+    .first<DailySalesSummary>();
+  const expenses = await db
+    .prepare(
+      "SELECT COALESCE(SUM(amount_cents),0) total FROM expenses WHERE created_at>=? AND created_at<?",
+    )
+    .bind(start, end)
+    .first<ExpenseSummary>();
+  const report = { ...summary, expenses: expenses?.total ?? 0 };
+  const id = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO daily_closings(id,business_date,report_json,created_by,created_at) VALUES(?,?,?,?,?) ON CONFLICT(business_date) DO UPDATE SET report_json=excluded.report_json,created_by=excluded.created_by,created_at=excluded.created_at",
+      )
+      .bind(id, date, JSON.stringify(report), user.id, now),
+    db
+      .prepare(
+        "INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,details_json,created_at) VALUES(?,?,?,?,?,?,?)",
+      )
+      .bind(
+        crypto.randomUUID(),
+        user.id,
+        "close",
+        "business_day",
+        date,
+        JSON.stringify(report),
+        now,
+      ),
+  ]);
+  revalidatePath("/dashboard/reports");
+}
