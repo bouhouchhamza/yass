@@ -6,8 +6,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --webpack",
+    "dev": "node init && next dev",
+    "build": "node init && next build --webpack",
+    "build:cloudflare": "node init && npm run cf-typegen && opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv",
@@ -16,7 +17,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply stationery-db --remote",
     "db:seed:local": "wrangler d1 execute stationery-db --local --file=./database/seed.sql",
     "db:seed:remote": "wrangler d1 execute stationery-db --remote --file=./database/seed.sql",
-    "start": "next start",
+    "start": "node init && next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -1,7 +1,5 @@
 node_modules
 .next
-.env
-.env.local
 coverage
 *.log
 .vercel
@@ -10,3 +8,4 @@ coverage
 .dev.vars
 worker-configuration.d.ts
 tsconfig.tsbuildinfo
+config.bat
